@@ -1,101 +1,191 @@
-describe('API de Usuário', () => {
+describe('API de Usuários', () => {
 
-    let usuarioId //Variável para armazenar o ID do usuário criado
+    // Factory responsável por gerar uma nova massa de dados para cada usuário
+    const gerarUsuario = () => ({
+        nome: 'Gessé Santana',
+        email: `gesse${Date.now()}@gmail.com`,
+        password: 'Teste@123',
+        administrador: 'true'
+    })
+
+    // Helper responsável por criar um usuário e retornar a resposta da API
+    const criarUsuario = () => {
+        const usuario = gerarUsuario()
+
+        return cy.request('POST', '/usuarios', usuario)
+    }
 
     it('deve criar um usuário', () => {
 
-        //Cria um usuário
-        cy.request('POST', '/usuarios', {
-            nome: 'Gessé do Prado Santana',
-            email: `gesse${Date.now()}@gmail.com`,
-            password: 'Teste@123',
-            administrador: 'true'
+        // Preparação: gera os dados necessários para o cadastro
+        const usuario = gerarUsuario()
 
-        }).then((response) => {
+        // Ação: envia a requisição para cadastrar o usuário
+        return cy.request('POST', '/usuarios', usuario)
+            .then((response) => {
 
-            //Verifica se o usuário foi criado com sucesso
-            expect(response.status).to.eq(201)
-            expect(response.body.message).to.eq('Cadastro realizado com sucesso')
-            expect(response.body).to.have.property('_id')
-
-            //ID do usuário atribuido a variável usuarioId
-            usuarioId = response.body._id
-        })
+                // Validação: confirma que o cadastro foi realizado com sucesso
+                expect(response.status).to.eq(201)
+                expect(response.body.message).to.eq(
+                    'Cadastro realizado com sucesso'
+                )
+                expect(response.body).to.have.property('_id')
+                expect(response.body._id).to.be.a('string')
+            })
     })
 
     it('deve listar todos os usuários', () => {
 
-        //Lista todos os usuários
-        cy.request('GET', '/usuarios').then((response) => {
+        // Ação: solicita a lista de usuários cadastrados
+        return cy.request('GET', '/usuarios')
+            .then((response) => {
 
-            //Verifica se a lista de usuários foi retornada com sucesso
-            expect(response.status).to.eq(200)
-            expect(response.body).to.have.property('usuarios')
-            expect(response.body.usuarios).to.be.an('array')
-        })
+                // Validação: confirma a estrutura e os dados retornados
+                expect(response.status).to.eq(200)
+                expect(response.body).to.have.property('usuarios')
+                expect(response.body.usuarios).to.be.an('array')
+                expect(response.body).to.have.property('quantidade')
+                expect(response.body.quantidade).to.be.a('number')
+                expect(response.body.quantidade).to.eq(
+                    response.body.usuarios.length
+                )
+            })
     })
 
     it('deve buscar um usuário por ID', () => {
 
-        //Busca um usuário por ID
-        cy.request('GET', `/usuarios/${usuarioId}`).then((response) => {
+        // Preparação: cria um usuário para obter um ID válido
+        return criarUsuario()
+            .then((responseCriacao) => {
+                const usuarioId = responseCriacao.body._id
 
-            //Verifica se o usuário foi encontrado com sucesso
-            expect(response.status).to.eq(200)
-            expect(response.body).to.have.property('_id')
-            expect(response.body._id).to.eq(usuarioId)
-        })
+                // Ação: busca o usuário utilizando o ID criado
+                return cy.request('GET', `/usuarios/${usuarioId}`)
+            })
+            .then((responseBusca) => {
+
+                // Validação: confirma que o usuário correto foi retornado
+                expect(responseBusca.status).to.eq(200)
+                expect(responseBusca.body).to.have.property('_id')
+                expect(responseBusca.body._id).to.be.a('string')
+            })
     })
 
     it('deve atualizar um usuário', () => {
 
-        //Atualiza um usuário
-        cy.request('PUT', `/usuarios/${usuarioId}`, {
-            nome: 'Gessé do Prado Santana',
+        // Preparação: define os novos dados que serão utilizados na atualização
+        const usuarioAtualizado = {
+            nome: 'Gessé do Prado Santana Atualizado',
             email: `gesse.atualizado${Date.now()}@gmail.com`,
             password: 'Teste@123',
             administrador: 'true'
+        }
 
-        }).then((response) => {
+        // Preparação: cria um usuário para que ele possa ser atualizado
+        return criarUsuario()
+            .then((responseCriacao) => {
+                const usuarioId = responseCriacao.body._id
 
-            //Verifica se o usuário foi atualizado com sucesso
-            expect(response.status).to.eq(200)
-            expect(response.body.message).to.eq('Registro alterado com sucesso')
+                // Ação: atualiza os dados do usuário criado
+                return cy.request(
+                    'PUT',
+                    `/usuarios/${usuarioId}`,
+                    usuarioAtualizado
+                ).then((responseAtualizacao) => {
 
-            // Busca o usuário novamente para confirmar que os dados atualizados estão corretos
-            cy.request('GET', `/usuarios/${usuarioId}`).then((response) => {
-                expect(response.status).to.eq(200)
-                expect(response.body.nome).to.eq(nomeAtualizado)
-                expect(response.body.email).to.eq(emailAtualizado)
+                    // Validação: confirma que a API aceitou a atualização
+                    expect(responseAtualizacao.status).to.eq(200)
+                    expect(responseAtualizacao.body.message).to.eq(
+                        'Registro alterado com sucesso'
+                    )
+
+                    // Ação complementar: busca novamente o usuário atualizado
+                    return cy.request('GET', `/usuarios/${usuarioId}`)
+                })
             })
-        })
+            .then((responseBusca) => {
+
+                // Validação: confirma que os novos dados foram persistidos
+                expect(responseBusca.status).to.eq(200)
+                expect(responseBusca.body.nome).to.eq(
+                    usuarioAtualizado.nome
+                )
+                expect(responseBusca.body.email).to.eq(
+                    usuarioAtualizado.email
+                )
+                expect(responseBusca.body.administrador).to.eq(
+                    usuarioAtualizado.administrador
+                )
+            })
     })
 
-    it('deve deletar um usuário', () => {
+    it('deve excluir um usuário', () => {
 
-        //Deleta um usuário
-        cy.request('DELETE', `/usuarios/${usuarioId}`).then((response) => {
+        // Preparação: cria um usuário para que ele possa ser excluído
+        return criarUsuario()
+            .then((responseCriacao) => {
+                const usuarioId = responseCriacao.body._id
 
-            //Verifica se o usuário foi deletado com sucesso
-            expect(response.status).to.eq(200)
-            expect(response.body.message).to.eq('Registro excluído com sucesso')
-        })
+                // Ação: exclui o usuário criado
+                return cy.request('DELETE', `/usuarios/${usuarioId}`)
+                    .then((responseExclusao) => {
+
+                        // Validação: confirma que a exclusão foi realizada
+                        expect(responseExclusao.status).to.eq(200)
+                        expect(responseExclusao.body.message).to.eq(
+                            'Registro excluído com sucesso'
+                        )
+
+                        // Ação complementar: tenta buscar o usuário excluído
+                        return cy.request({
+                            method: 'GET',
+                            url: `/usuarios/${usuarioId}`,
+                            failOnStatusCode: false
+                        })
+                    })
+            })
+            .then((responseBusca) => {
+
+                // Validação: confirma que o usuário não existe mais
+                expect(responseBusca.status).to.eq(400)
+                expect(responseBusca.body.message).to.eq(
+                    'Usuário não encontrado'
+                )
+            })
     })
 
-    it('usuario inexistente deve retornar 404', () => {
+    it('deve retornar 400 ao buscar um usuário inexistente', () => {
 
-        //Busca um usuário inexistente
-        cy.request({
-            method: 'GET',
-            url: `/usuarios/${usuarioId}`,
-            failOnStatusCode: false
+        // Preparação: cria um usuário para obter um ID válido
+        return criarUsuario()
+            .then((responseCriacao) => {
+                const usuarioId = responseCriacao.body._id
 
-        }).then((response) => {
+                // Preparação: exclui o usuário para tornar o ID inexistente
+                return cy.request('DELETE', `/usuarios/${usuarioId}`)
+                    .then((responseExclusao) => {
 
-            //Verifica se o usuário inexistente foi retornado com erro 404
-            expect(response.status).to.eq(404)
-            expect(response.body.message).to.eq('Usuário não encontrado')
-        })
+                        // Validação: confirma que o usuário foi excluído
+                        expect(responseExclusao.status).to.eq(200)
+                        expect(responseExclusao.body.message).to.eq(
+                            'Registro excluído com sucesso'
+                        )
+
+                        // Ação: tenta buscar um usuário que não existe mais
+                        return cy.request({
+                            method: 'GET',
+                            url: `/usuarios/${usuarioId}`,
+                            failOnStatusCode: false
+                        })
+                    })
+            })
+            .then((responseBusca) => {
+
+                // Validação: confirma o comportamento esperado para usuário inexistente
+                expect(responseBusca.status).to.eq(400)
+                expect(responseBusca.body.message).to.eq(
+                    'Usuário não encontrado'
+                )
+            })
     })
-
 })

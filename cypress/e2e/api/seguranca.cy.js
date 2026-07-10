@@ -2,6 +2,7 @@ describe('Testes de Segurança', () => {
 
     it('não deve cadastrar produto sem token', () => {
         
+        
         //Cadastra um produto com token inválido
         cy.request({
             method: 'POST',
