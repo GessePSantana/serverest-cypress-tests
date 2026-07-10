@@ -1,0 +1,25 @@
+{
+  "name": "serverest-cypress-tests",
+  "version": "1.0.0",
+  "description": "Testes de automatização com o Cypress e JavaScript para a aplicação ServeRest (front-end e API).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GessePSantana/serverest-cypress-tests.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/GessePSantana/serverest-cypress-tests/issues"
+  },
+  "homepage": "https://github.com/GessePSantana/serverest-cypress-tests#readme",
+  "devDependencies": {
+    "cypress": "^15.18.1",
+    "faker-br": "^0.5.0"
+  }
+}
